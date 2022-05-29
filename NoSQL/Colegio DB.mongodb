@@ -1,0 +1,188 @@
+const database = 'colegio'; // Criando o database
+
+db.createCollection("alunos") // Criando a collection
+
+db.alunos.insertOne( // Inserindo o primeiro aluno
+    {
+        'nome':'Joao da Silva Santos', 'idade':16,'email':'joao.santos@saojose.com','senha':'1234','turma':'1N05','matricula':'202201','cpf':'12344321123','disciplinas':[{
+            'nome':'Matematica','nota1':'8.5','nota2':'9','mediafinal':'8.75','professor':'Paulo da Silva'
+        },
+        {
+            'nome':'Ciencias','nota1':'2','nota2':'10','mediafinal':'6','professor':'Angela Maria'
+        },
+        {
+            'nome':'Portugues','nota1':'7','nota2':'5','mediafinal':'6','professor':'Ruan Carlos'
+        }]
+    }
+)
+
+db.alunos.insertMany([ // Inserindo os outros alunos
+    {
+        'nome':'Maria Henriqueta Marques', 'idade':17,'email':'maria.marques@saojose.com','senha':'4321','turma':'1N03','matricula':'202202','cpf':'12344321114','disciplinas':[{
+            'nome':'Ciencias','nota1':'10','nota2':'9','mediafinal':'9.5','professor':'Angela Maria'
+        },
+        {
+            'nome':'Matematica','nota1':'8.5','nota2':'9','mediafinal':'8.75','professor':'Paulo da Silva'
+        },
+        {
+            'nome':'Portugues','nota1':'9','nota2':'9','mediafinal':'9','professor':'Ruan Carlos'
+        }
+        ]
+    },
+
+    {
+        'nome':'Lucas Soares', 'idade':15,'email':'lucas.soares@saojose.com','turma':'1N03','senha':'4444','matricula':'202203','cpf':'12344321115','disciplinas':[{
+            'nome':'Portugues','nota1':'7','nota2':'5','mediafinal':'6','professor':'Ruan Carlos'
+        },
+        {
+            'nome':'Matematica','nota1':'5','nota2':'8','mediafinal':'6.5','professor':'Paulo da Silva'
+        },
+        {
+            'nome':'Ciencias','nota1':'4','nota2':'3','mediafinal':'3.5','professor':'Angela Maria'
+        }
+        ]
+    },
+
+    {
+        'nome':'Pedro Rocha', 'idade':16,'email':'pedro.rocha@saojose.com','turma':'1N03','matricula':'202204','senha':'7896','cpf':'12344321196','disciplinas':[{
+            'nome':'Portugues','nota1':'7','nota2':'5','mediafinal':'6','professor':'Ruan Carlos'
+        },
+        {
+            'nome':'Matematica','nota1':'7','nota2':'7','mediafinal':'7','professor':'Paulo da Silva'
+        },
+        {
+            'nome':'Ciencias','nota1':'9','nota2':'10','mediafinal':'9.5','professor':'Angela Maria'
+        }
+        ]
+    },
+     {
+        'nome':'Maria Jose', 'idade':62,'email':'maria.jose@saojose.com','turma':'3N03','matricula':'202205','senha':'9999','cpf':'12344321197','disciplinas':[{
+            'nome':'Portugues','nota1':'9','nota2':'9','mediafinal':'9','professor':'Ruan Carlos'
+        },
+        {
+            'nome':'Matematica','nota1':'7','nota2':'7','mediafinal':'7','professor':'Paulo da Silva'
+        },
+        {
+            'nome':'Ciencias','nota1':'9','nota2':'10','mediafinal':'9.5','professor':'Angela Maria'
+        }
+        ]
+    }]
+
+)
+
+db.createCollection("professores") // Criando a collection dos professores
+
+db.professores.insertOne( // Inserindo os professores, mantendo todos com o mesmo nome da collection de alunos
+    {
+        'nome':'Paulo da Silva', 'idade':32,'matricula':'202101','formacao':'Matematica - Licenciatura','disciplinas':{
+            'nome':'Matematica'}
+    }
+)
+
+db.professores.insertMany([
+     {
+        'nome':'Angela Maria', 'idade':40,'matricula':'202102','formacao':'Fisica - Licenciatura','disciplinas':{
+            'nome':'Ciencias'}
+    },
+    {
+        'nome':'Ruan Carlos', 'idade':27,'matricula':'202103','formacao':'Letras - Portugues/Ingles','disciplinas':{
+            'nome':'Portugues'}
+    }]
+
+
+)
+
+//substituir o valor associado ao atributo professor (nome completo) pelo _id deste professor 
+//que está na collection professor. 
+
+db.alunos.aggregate([ 
+
+    {
+
+        $unwind: "$disciplinas" // O que nos queremos mudar
+
+    },
+    
+    {
+
+        
+
+        $project: {
+
+            "nome" : "$nome", 
+
+            "idade" : "$idade", 
+
+            "email" : "$email", 
+
+            "matricula" : "$matricula", 
+
+            "cpf" : "$cpf",
+
+            "senha": "$senha", 
+
+            "turma" : "$turma",
+
+            "disciplinas": "$disciplinas"
+
+        }
+
+    }
+
+]).forEach((item) => {
+
+    
+
+    // Essa query busca um prof da lista de professores com base no nome dele
+
+    
+
+    const prof = db.professores.findOne({
+
+        nome: item.disciplinas.professor
+
+    });
+   
+
+    db.alunos.updateOne(
+
+        { _id: item._id }, // Buscamos pelo ID do aluno que queremos atualizar
+
+        { $set: { "disciplinas.$[elem].professor": prof._id } }, // Definimos que queremos alterar a lista de disciplinas na posicao ELEM, onde sera incluido o ID do professor.
+
+        {
+
+            multi: true, // Permite atualizacao de varias linhas
+
+            arrayFilters: [{ "elem.professor": { $eq: prof.nome }  }] // É a condicao principal para que o SET seja realizado. Nesse caso, só será feita a alteracao quando o nome do professor der match com o professor encontrado.
+
+        }
+
+    );
+
+});
+
+
+
+db.alunos.find().pretty()
+
+// Removendo os alunos com mais de 60 anos
+db.alunos.remove(
+    {'idade':{
+        $gt:60
+    
+    }}
+
+
+)
+
+//Organizando a collection por ordem alfabética
+db.alunos.find().sort({"nome" : 1})
+
+// Localizando os professores mais de 30 anos e menos de 40 anos
+db.professores.find(
+    {
+        $and: 
+            [ {'idade':{$gte: 30}},{'idade':{$lt:40}}]
+    }
+)
